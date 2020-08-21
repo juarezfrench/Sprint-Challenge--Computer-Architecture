@@ -1,8 +1,6 @@
-"""CPU functionality."""
-
 import sys
 
-# re
+"""CPU functionality."""
 CALL = 0b01010000
 ADD = 0b10100000
 DIV = 0b10100011
@@ -21,7 +19,7 @@ JMP = 0b01010100
 JNE = 0b01010110
 HLT = 0b00000001
 SP = 7
-FL = 0
+
 
 class CPU:
     """Main CPU class."""
@@ -30,8 +28,10 @@ class CPU:
         """Construct a new CPU."""
         self.ram = [0] * 256
         self.pc = 0
-        self.reg = [0] * 8
-        self.FL = 0
+        self.reg = [0] * 10
+        self.FL = 0b00000000
+        self.IR = 0 # Instruction Register
+        self.SP = 7
         self.branchtable = {
             CALL: self.call,
             ADD : self.alu,
@@ -97,6 +97,14 @@ class CPU:
             self.reg[reg_a] *= self.reg[reg_b]
             print(f"MUL at REG[{self.pc + 1}]: {self.reg[self.pc + 1]}")
 
+        elif op == CMP:
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.fl = 0b00000001
+            elif self.reg[reg_a] < self.reg[reg_b]:
+                self.fl = 0b00000100
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.fl = 0b00000010                
+
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -114,12 +122,7 @@ class CPU:
 
 
     def run(self):
-        """Run the CPU.       
-        1. read mem at PC
-        2. store result in local var
-        3. turn into hash_tables
-        """
-        
+        """Run the CPU."""
         while True:
             ir = self.ram[self.pc]
             reg_a = self.ram_read(self.pc + 1)
@@ -142,6 +145,7 @@ class CPU:
                 print('Unsupported command')
             if not set_pc:
                 self.pc += update
+
 
     def trace(self):
         """
@@ -201,12 +205,12 @@ class CPU:
         # no more running, just exit
         sys.exit()
 
-    def jeq(self,ops):
-        if self.FL == 1:
-            self.MAR = self.ram_read(self.PC + 1)
-            self.PC = self.reg[self.MAR]
+    def jeq(self, reg_a, reg_b=None):
+        # if equal (fl) 'jump' to given reg
+        if self.fl & 0b1 == 1:
+            self.pc = self.reg[reg_a]
         else:
-            self.PC = self.bitwise_addition(self.PC, ops)
+            self.pc += 2
 
     def jge(self,ops):
         if self.FL == 1:
@@ -215,16 +219,13 @@ class CPU:
         else:
             self.PC = self.bitwise_addition(self.PC, ops)
 
-    def jmp(self,ops):
-        if self.FL == 1:
-            self.MAR = self.ram_read(self.PC + 1)
-            self.PC = self.reg[self.MAR]
-        else:
-            self.PC = self.bitwise_addition(self.PC, ops)
+    def jmp(self, reg_a, reg_b=None):
+        # go to stored reg
+        self.pc = self.reg[reg_a]
 
-    def jne(self,ops):
-        if self.FL != 1 and not 0:
-            self.MAR = self.ram_read(self.PC + 1)
-            self.PC = self.reg[self.MAR]
+    def jne(self, reg_a, reg_b=None):
+        # if equal (fl) is 0 go to given reg
+        if self.fl & 0b1 == 0:
+            self.pc = self.reg[reg_a]
         else:
-            self.PC = self.bitwise_addition(self.PC, ops)
+            self.pc += 2
